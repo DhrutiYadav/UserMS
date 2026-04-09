@@ -1,43 +1,39 @@
-# ----------------------------
+# ============================
 # .NET Backend
-# ----------------------------
-User-backend/bin/
-User-backend/obj/
-User-backend/.vs/
-User-backend/*.user
-User-backend/*.suo
-User-backend/*.cache
-User-backend/appsettings.json
-User-backend/appsettings.Development.json
-bin/
-obj/
+# ============================
 **/bin/
 **/obj/
-.vs/
 **/.vs/
+**/*.user
+**/*.suo
+**/*.cache
+
+# App settings / secrets
+**/appsettings.json
+**/appsettings.Development.json
 
 # Logs
-User-backend/logs/
-User-backend/*.log
+**/logs/
+**/*.log
 
-# ----------------------------
+# ============================
 # React Frontend
-# ----------------------------
-User-UI/node_modules/
-User-UI/build/
-User-UI/dist/
-User-UI/.env
-User-UI/.env.local
+# ============================
+**/node_modules/
+**/build/
+**/dist/
+**/.env
+**/.env.local
+**/Axios.jsx
+# npm / yarn logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Logs
-User-UI/npm-debug.log*
-User-UI/yarn-debug.log*
-User-UI/yarn-error.log*
-
-# ----------------------------
-# OS / Editor files
-# ----------------------------
-.DS_Store
-Thumbs.db
+# ============================
+# Editor / OS files
+# ============================
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
