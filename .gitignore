@@ -1,0 +1,37 @@
+# ----------------------------
+# .NET Backend
+# ----------------------------
+User-backend/bin/
+User-backend/obj/
+User-backend/.vs/
+User-backend/*.user
+User-backend/*.suo
+User-backend/*.cache
+User-backend/appsettings.json
+User-backend/appsettings.Development.json
+
+# Logs
+User-backend/logs/
+User-backend/*.log
+
+# ----------------------------
+# React Frontend
+# ----------------------------
+User-UI/node_modules/
+User-UI/build/
+User-UI/dist/
+User-UI/.env
+User-UI/.env.local
+
+# Logs
+User-UI/npm-debug.log*
+User-UI/yarn-debug.log*
+User-UI/yarn-error.log*
+
+# ----------------------------
+# OS / Editor files
+# ----------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
