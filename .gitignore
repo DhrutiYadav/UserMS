@@ -9,6 +9,12 @@ User-backend/*.suo
 User-backend/*.cache
 User-backend/appsettings.json
 User-backend/appsettings.Development.json
+bin/
+obj/
+**/bin/
+**/obj/
+.vs/
+**/.vs/
 
 # Logs
 User-backend/logs/
