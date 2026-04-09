@@ -3,12 +3,7 @@
     "",
     "\\.github",
     "\\User-backend",
-    "\\User-UI",
-    "\\User-UI\\user-ui",
-    "\\User-UI\\user-ui\\public",
-    "\\User-UI\\user-ui\\src",
-    "\\User-UI\\user-ui\\src\\Api"
+    "\\User-UI"
   ],
-  "SelectedNode": "\\User-UI\\user-ui\\src\\Api\\Axios.jsx",
   "PreviewInSolutionExplorer": false
 }
