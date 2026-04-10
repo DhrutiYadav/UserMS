@@ -37,3 +37,8 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+User-backend/User/appsettings.json
+User-backend/**/bin/
+User-backend/**/obj/
+.env
