@@ -12,5 +12,6 @@ namespace User.Services
         Task<TokenResponceDto?> LoginAsync(LoginDto request);
         Task<TokenResponceDto?> RefreshTokenAsync(RefreshTokenRequestDto request);
         Task<List<UserDisplayDto>> GetAllUsersAsync();
+        Task<TokenResponceDto> FacebookLoginAsync(string name, string email);
     }
 }

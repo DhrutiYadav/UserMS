@@ -242,5 +242,35 @@ namespace User.Services
                 })
                 .ToListAsync();
         }
+
+        public async Task<TokenResponceDto> FacebookLoginAsync(string name, string email)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null)
+            {
+                user = new EntitieUser
+                {
+                    FirstName = name,
+                    LastName = "",
+                    UserName = !string.IsNullOrEmpty(email)
+                        ? email.Split('@')[0]
+                        : name.Replace(" ", "").ToLower(),
+
+                    Email = string.IsNullOrWhiteSpace(email)
+                        ? $"{name.Replace(" ", "").ToLower()}@facebook.local"
+                        : email,
+                    PhoneNo = "",
+                    PasswordHash = "",
+                    Role = "User"
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+            }
+
+            return await CreateTokenResponce(user);
+        }
     }
 }

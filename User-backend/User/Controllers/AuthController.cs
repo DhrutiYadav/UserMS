@@ -2,9 +2,10 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
+using System.Text.Json;
 using User.CustomAttribute;
-using User.Entities;
 using User.DTOs;
+using User.Entities;
 using User.Services;
 using static User.Services.AuthService;
 
@@ -108,7 +109,7 @@ namespace User.Controllers
                 _logger.LogInformation("Valid Refresh Token");
                 return Ok(result);
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while refreshing token");
                 return StatusCode(500, "Internal server error");
@@ -131,5 +132,51 @@ namespace User.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        [HttpPost("facebook")]
+        public async Task<IActionResult> FacebookLogin([FromBody] FacebookLoginDto model)
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+
+                var response = await httpClient.GetAsync(
+                    $"https://graph.facebook.com/me?fields=id,name,email&access_token={model.AccessToken}"
+                );
+
+                if (!response.IsSuccessStatusCode)
+                    return BadRequest("Invalid Facebook token");
+
+                var content = await response.Content.ReadAsStringAsync();
+
+                var facebookUser = JsonSerializer.Deserialize<FacebookUserDto>(
+                    content,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                // IMPORTANT FIX START
+                if (facebookUser == null)
+                    return BadRequest("Facebook user data not found");
+
+                if (string.IsNullOrWhiteSpace(facebookUser.Email))
+                {
+                    facebookUser.Email =
+                        $"{facebookUser.Name.Replace(" ", "").ToLower()}@facebook.local";
+                }
+                var tokenResponse = await _authService.FacebookLoginAsync(
+                    facebookUser.Name,
+                    facebookUser.Email
+                );
+
+                return Ok(tokenResponse);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
     }
 }

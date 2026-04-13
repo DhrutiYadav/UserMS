@@ -20,10 +20,10 @@ public partial class Program
         // Add services to the container.
 
         builder.Services.AddCors(options =>
-            options.AddPolicy("React", policy =>
+            options.AddPolicy("AllowReactApp", policy =>
             {
                 policy
-                    .WithOrigins("http://localhost:3000") //react frontend url
+                    .WithOrigins("https://localhost:3000") //react frontend url
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();
@@ -34,14 +34,6 @@ public partial class Program
             {
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()); //Converts enums → string instead of number
             });
-
-
-        //builder.Services.AddEndpointsApiExplorer();
-
-        //builder.Services.AddSwaggerGen(c =>
-        //{
-        //    c.UseInlineDefinitionsForEnums();
-        //});
 
 
         builder.Services.AddEndpointsApiExplorer();
@@ -155,7 +147,7 @@ public partial class Program
 
         app.UseHttpsRedirection();
 
-        app.UseCors("React");
+        app.UseCors("AllowReactApp");
 
         app.UseAuthentication();
 
