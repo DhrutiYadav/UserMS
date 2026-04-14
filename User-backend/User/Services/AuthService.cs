@@ -272,5 +272,33 @@ namespace User.Services
 
             return await CreateTokenResponce(user);
         }
+
+        public async Task<TokenResponceDto> GitHubLoginAsync(
+            string name,
+            string userName,
+            string email)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null)
+            {
+                user = new EntitieUser
+                {
+                    FirstName = name,
+                    LastName = "",
+                    UserName = userName + "_github",
+                    Email = email,
+                    PhoneNo = "",
+                    PasswordHash = "",
+                    Role = "User"
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+            }
+
+            return await CreateTokenResponce(user);
+        }
     }
 }

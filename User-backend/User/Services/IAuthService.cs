@@ -13,5 +13,6 @@ namespace User.Services
         Task<TokenResponceDto?> RefreshTokenAsync(RefreshTokenRequestDto request);
         Task<List<UserDisplayDto>> GetAllUsersAsync();
         Task<TokenResponceDto> FacebookLoginAsync(string name, string email);
+        Task<TokenResponceDto> GitHubLoginAsync(string name, string userName, string email);
     }
 }

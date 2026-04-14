@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Humanizer.Configuration;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using User.CustomAttribute;
 using User.DTOs;
@@ -9,19 +11,23 @@ using User.Entities;
 using User.Services;
 using static User.Services.AuthService;
 
+
 namespace User.Controllers
 {
+
     [Route("api/auth")]
     [ApiController]
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;
+        private readonly IConfiguration _configuration;
 
-        public AuthController(IAuthService authService, ILogger<AuthController> logger)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger, IConfiguration? configuration)
         {
             _authService = authService;
             _logger = logger;
+            _configuration = configuration;
         }
         [HttpPost("register")]
         public async Task<ActionResult<RegisterResult>> Register([FromBody] RegisterDto request)
@@ -171,6 +177,131 @@ namespace User.Controllers
                 );
 
                 return Ok(tokenResponse);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+
+        [HttpPost("github")]
+        public async Task<IActionResult> GitHubLogin([FromBody] GitHubLoginDto model)
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+
+                // STEP 1: Exchange code for token
+                var tokenRequest = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    "https://github.com/login/oauth/access_token"
+                );
+
+                tokenRequest.Headers.Accept.Add(
+                    new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json")
+                );
+
+                tokenRequest.Content = new FormUrlEncodedContent(
+                    new Dictionary<string, string>
+                    {
+                { "client_id", _configuration["GitHub:ClientId"] },
+                { "client_secret", _configuration["GitHub:ClientSecret"] },
+                { "code", model.Code }
+                    }
+                );
+
+                var tokenResponse = await httpClient.SendAsync(tokenRequest);
+                var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
+
+                Console.WriteLine("TOKEN STATUS: " + tokenResponse.StatusCode);
+                Console.WriteLine("TOKEN JSON: " + tokenJson);
+                var tokenData = JsonSerializer.Deserialize<GitHubTokenResponse>(tokenJson);
+
+                if (string.IsNullOrEmpty(tokenData?.AccessToken))
+                    return BadRequest(tokenJson);
+
+                // STEP 2: Get GitHub user
+                var userRequest = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    "https://api.github.com/user"
+                );
+
+                userRequest.Headers.Authorization =
+                    new AuthenticationHeaderValue("Bearer", tokenData.AccessToken);
+
+                userRequest.Headers.UserAgent.ParseAdd("MyApp");
+
+                var userResponse = await httpClient.SendAsync(userRequest);
+
+                var userJson = await userResponse.Content.ReadAsStringAsync();
+
+                Console.WriteLine("USER STATUS: " + userResponse.StatusCode);
+                Console.WriteLine("USER JSON: " + userJson);
+                var githubUser = JsonSerializer.Deserialize<GitHubUserDto>(
+                    userJson,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                if (githubUser == null)
+                    return BadRequest("GitHub user data not found");
+
+                var email = githubUser.Email;
+
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    try
+                    {
+                        var emailRequest = new HttpRequestMessage(
+                            HttpMethod.Get,
+                            "https://api.github.com/user/emails"
+                        );
+
+                        emailRequest.Headers.Authorization =
+                            new AuthenticationHeaderValue("Bearer", tokenData.AccessToken);
+
+                        emailRequest.Headers.UserAgent.ParseAdd("MyApp");
+
+                        var emailResponse = await httpClient.SendAsync(emailRequest);
+
+                        var emailJson = await emailResponse.Content.ReadAsStringAsync();
+
+                        Console.WriteLine("EMAIL API STATUS: " + emailResponse.StatusCode);
+                        Console.WriteLine("EMAIL API RESPONSE: " + emailJson);
+
+                        if (emailResponse.IsSuccessStatusCode)
+                        {
+                            var emails = JsonSerializer.Deserialize<List<GitHubEmailDto>>(
+                                emailJson,
+                                new JsonSerializerOptions
+                                {
+                                    PropertyNameCaseInsensitive = true
+                                });
+
+                            email = emails?
+                                .FirstOrDefault(e => e.Primary)?.Email
+                                ?? $"{githubUser.Login}@github.local";
+                        }
+                        else
+                        {
+                            email = $"{githubUser.Login}@github.local";
+                        }
+                    }
+                    catch
+                    {
+                        email = $"{githubUser.Login}@github.local";
+                    }
+                }
+
+                var jwtResponse = await _authService.GitHubLoginAsync(
+                    githubUser.Name ?? githubUser.Login,
+                    githubUser.Login,
+                    email
+                );
+
+                return Ok(jwtResponse);
             }
             catch (Exception ex)
             {

@@ -15,6 +15,24 @@ const Login = () => {
       setIsValid(false);
     }
   }, [userNameOrEmail, password]);
+
+  // useEffect(() => {
+  //   const code = new URLSearchParams(window.location.search).get("code");
+  
+  //   if (code) {
+  //     processGitHubLogin(code);
+  //   }
+  // }, []);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("code");
+  
+    if (code && !sessionStorage.getItem("githubCodeUsed")) {
+      sessionStorage.setItem("githubCodeUsed", "true");
+      processGitHubLogin(code);
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -24,10 +42,6 @@ const Login = () => {
           userNameOrEmail,
           password,
         }),
-        // {
-        //   headers: { "Content-Type": "application/json" },
-        //   withCredentials: true,
-        // }
       );
       // save JWT token
       localStorage.setItem("token", response.data.accessToken);
@@ -82,6 +96,45 @@ const Login = () => {
       alert("Facebook login failed");
     }
   };
+
+  const handleGitHubLogin = () => {
+    const clientId = "Ov23li34C62vBwVvvMPN";
+  
+    const redirectUri = "https://localhost:3000";
+  
+    window.location.href =
+      `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email`;
+  };
+
+  const processGitHubLogin = async (code) => {
+    try {
+      const response = await Axios.post("/api/auth/github", {
+        code: code,
+      });
+  
+      console.log("GitHub login success:", response.data);
+  
+      localStorage.setItem("token", response.data.accessToken);
+  
+      // IMPORTANT: remove code from URL
+      window.history.replaceState({}, document.title, "/login");
+  
+      // clear flag after success
+      sessionStorage.removeItem("githubCodeUsed");
+  
+      navigate("/users", { replace: true });
+    } catch (error) {
+      console.log(error);
+      console.log("STATUS:", error.response?.status);
+      console.log("DATA:", error.response?.data);
+  
+      // clear old code flag on failure
+      sessionStorage.removeItem("githubCodeUsed");
+  
+      alert("GitHub login failed");
+    }
+  };
+  
   return (
     <>
       <div className="uiBox">
@@ -145,11 +198,14 @@ const Login = () => {
               Login with Facebook
           </button>
           </div>
+
+          <button onClick={handleGitHubLogin}>
+            Login with GitHub
+          </button>
         <p>
           Do not Registered?
           <Link to="/register">Register</Link>
         </p>
-
         
       </div>
     </>
