@@ -9,7 +9,6 @@ using User.CustomAttribute;
 using User.DTOs;
 using User.Entities;
 using User.Services;
-using static User.Services.AuthService;
 
 namespace User.Controllers
 {
@@ -28,7 +27,7 @@ namespace User.Controllers
             _configuration = configuration;
         }
         [HttpPost("register")]
-        public async Task<ActionResult<RegisterResult>> Register([FromBody] RegisterDto request)
+        public async Task<ActionResult<RegisterResultDto>> Register([FromBody] RegisterDto request)
         {
 
             var result = await _authService.CreateUserAsync(request, "Manager");
@@ -44,33 +43,36 @@ namespace User.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPost("addUser")]
-        public async Task<ActionResult<RegisterResult>> AddUser([FromBody] AddUserDto request)
+        public async Task<ActionResult<RegisterResultDto>> AddUser([FromBody] AddUserDto request)
         {
 
-            _logger.LogInformation("Admin Add the User: {UserName}", request.UserName);
+            _logger.LogInformation("Admin is creating user {UserName}", request.UserName);
             var result = await _authService.CreateUserAsync(request);
 
             if (!result.Success)
             {
-                _logger.LogWarning("the field Not fill or UserName Taken: {UserName}", request.UserName);
+                _logger.LogWarning("the field Not fill or UserName Taken: {UserName}", request.UserName, result.ErrorMessage);
                 return Conflict(new { message = result.ErrorMessage });
             }
-            _logger.LogInformation("Registration successfully!!: {UserName}", request.UserName);
-            return Ok(result.User);
-
+            _logger.LogInformation("User created successfully: {UserName}", request.UserName);
+            return Ok(result);
         }
 
         [HttpPost("login")]
-        //[ApiKey]
-        public async Task<ActionResult> Login(LoginDto request)
+        [ApiKey]
+        public async Task<ActionResult<TokenResponceDto>> Login(LoginDto request)
         {
 
             _logger.LogInformation("login attempt for user: {UserName}", request.UserNameOrEmail);
             var result = await _authService.LoginAsync(request);
             if (result == null)
             {
-                _logger.LogWarning("Invalid username or Password: {UserName}", request.UserNameOrEmail);
-                return BadRequest("Invalid username or Password");
+                _logger.LogWarning("Login failed for user:  {UserName}", request.UserNameOrEmail);
+                return Unauthorized(
+                    new
+                    {
+                        message = "Invalid username or password"
+                    });
             }
 
             _logger.LogInformation("login successful for user: {UserName}", request.UserNameOrEmail);
@@ -82,17 +84,17 @@ namespace User.Controllers
         [HttpPost("RefreshToken")]
         public async Task<ActionResult<TokenResponceDto>> RefreshToken(RefreshTokenRequestDto request)
         {
-
             var result = await _authService.RefreshTokenAsync(request);
 
             if (result is null || result.AccessToken is null || result.RefreshToken is null)
             {
-                _logger.LogInformation("Invalid refresh token");
+                _logger.LogWarning(
+                    "Invalid refresh token for UserId: {UserId}",
+                    request.UserId);
                 return Unauthorized("Invalid Refresh Token");
             }
             _logger.LogInformation("Valid Refresh Token");
             return Ok(result);
-
         }
 
         [Authorize(Roles = "Admin")]

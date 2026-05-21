@@ -36,15 +36,23 @@ namespace User.Services
             public UserDisplayDto? User { get; set; }
         }
 
+        public class LoginResult
+        {
+            public bool Success { get; set; }
+
+            public string? ErrorMessage { get; set; }
+
+            public TokenResponceDto? Token { get; set; }
+        }
 
         /* Registration */
-        public async Task<RegisterResult> CreateUserAsync(RegisterDto request, string role)
+        public async Task<RegisterResultDto> CreateUserAsync(RegisterDto request, string role)
         {
             var allowedRoles = Enum.GetNames(typeof(UserRole));
 
             if (string.IsNullOrWhiteSpace(role))
             {
-                return new RegisterResult
+                return new RegisterResultDto
                 {
                     Success = false,
                     ErrorMessage = "Role is required."
@@ -56,7 +64,7 @@ namespace User.Services
 
             if (matchedRole == null)
             {
-                return new RegisterResult
+                return new RegisterResultDto
                 {
                     Success = false,
                     ErrorMessage = $"Invalid role. Allowed roles: {string.Join(", ", allowedRoles)}"
@@ -69,7 +77,7 @@ namespace User.Services
             var userExists = await _context.Users.AnyAsync(u => u.UserName == request.UserName);
             if (userExists)
             {
-                return new RegisterResult
+                return new RegisterResultDto
                 {
                     Success = false,
                     ErrorMessage = "UserName already Exists"
@@ -81,7 +89,7 @@ namespace User.Services
                     u.Email.ToLower() == request.Email.ToLower());
             if (emailExists)
             {
-                return new RegisterResult
+                return new RegisterResultDto
                 {
                     Success = false,
                     ErrorMessage = "Email already Exists"
@@ -96,7 +104,7 @@ namespace User.Services
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return new RegisterResult
+            return new RegisterResultDto
             {
                 Success = true,
                 User = _mapper.Map<UserDisplayDto>(user)
@@ -104,7 +112,7 @@ namespace User.Services
         }
 
         /* AddUser */
-        public async Task<RegisterResult> CreateUserAsync(AddUserDto request)
+        public async Task<RegisterResultDto> CreateUserAsync(AddUserDto request)
         {
             var registerDto = _mapper.Map<RegisterDto>(request);
 
@@ -218,20 +226,10 @@ namespace User.Services
             /* return to the RefreshTokenAsync() */
         }
 
-
         public async Task<List<UserDisplayDto>> GetAllUsersAsync()
         {
-            return await _context.Users
-                .Select(u => new UserDisplayDto
-                {
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    UserName = u.UserName,
-                    Email = u.Email,
-                    PhoneNo = u.PhoneNo,
-                    Role = u.Role
-                })
-                .ToListAsync();
+            var users = await _context.Users.ToListAsync();
+            return _mapper.Map<List<UserDisplayDto>>(users);
         }
 
         public async Task<TokenResponceDto> FacebookLoginAsync(string name, string email)
@@ -288,7 +286,6 @@ namespace User.Services
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
             }
-
             return await CreateTokenResponce(user);
         }
     }
