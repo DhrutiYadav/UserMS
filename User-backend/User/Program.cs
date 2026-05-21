@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -9,7 +10,10 @@ using System.Text.Json.Serialization;
 using User;
 using User.CustomAttribute;
 using User.Data;
+using User.Entities;
 using User.Interface;
+using User.Mapping;
+using User.Middleware;
 using User.Services;
 public partial class Program
 {
@@ -35,6 +39,7 @@ public partial class Program
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()); //Converts enums → string instead of number
             });
 
+        builder.Services.AddAutoMapper(typeof(MappingProfile));
 
         builder.Services.AddEndpointsApiExplorer();
 
@@ -93,6 +98,8 @@ public partial class Program
             options.UseSqlServer(builder.Configuration.GetConnectionString("UserDatabase"))
         );
 
+        builder.Services.AddScoped<IPasswordHasher<EntitieUser>,
+                           PasswordHasher<EntitieUser>>();
         builder.Services.AddScoped<IAuthService, AuthService>();
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).
@@ -146,6 +153,10 @@ public partial class Program
         }
 
         app.UseHttpsRedirection();
+        
+        app.UseMiddleware<RequestLoggingMiddleware>();
+
+        app.UseMiddleware<GlobalExceptionMiddleware>();
 
         app.UseCors("AllowReactApp");
 

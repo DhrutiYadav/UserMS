@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
@@ -8,27 +9,31 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using User.Data;
-using User.Entities;
 using User.DTOs;
+using User.Entities;
 
 namespace User.Services
 {
     public class AuthService : IAuthService
     {
         private readonly UserDbContext _context;
+        private readonly IMapper _mapper;
+        private readonly IPasswordHasher<EntitieUser> _passwordHasher;
         private readonly IConfiguration _configuration;
 
-        public AuthService(UserDbContext context, IConfiguration configuration)
+        public AuthService(UserDbContext context, IConfiguration configuration, IMapper mapper, IPasswordHasher<EntitieUser> passwordHasher)
         {
             _context = context;
             _configuration = configuration;
+            _mapper = mapper;
+            _passwordHasher = passwordHasher;
         }
 
         public class RegisterResult
         {
             public bool Success { get; set; }
             public string? ErrorMessage { get; set; }
-            public EntitieUser? User { get; set; }
+            public UserDisplayDto? User { get; set; }
         }
 
 
@@ -71,7 +76,9 @@ namespace User.Services
                 };
             }
 
-            var emailExists = await _context.Users.AnyAsync(u => u.Email == request.Email);
+            var emailExists = await _context.Users
+                .AnyAsync(u =>
+                    u.Email.ToLower() == request.Email.ToLower());
             if (emailExists)
             {
                 return new RegisterResult
@@ -81,16 +88,10 @@ namespace User.Services
                 };
             }
 
-            var user = new EntitieUser();
-            var hassedPassword = new PasswordHasher<EntitieUser>()
-                .HashPassword(user, request.Password);
+            var user = _mapper.Map<EntitieUser>(request);
 
-            user.FirstName = request.FirstName;
-            user.LastName = request.LastName;
-            user.UserName = request.UserName;
-            user.Email = request.Email;
-            user.PhoneNo = request.PhoneNo;
-            user.PasswordHash = hassedPassword;
+            user.PasswordHash =
+                _passwordHasher.HashPassword(user, request.Password);
             user.Role = role;   // Role now comes from controller
 
             _context.Users.Add(user);
@@ -98,26 +99,16 @@ namespace User.Services
             return new RegisterResult
             {
                 Success = true,
-                User = user
+                User = _mapper.Map<UserDisplayDto>(user)
             };
         }
 
         /* AddUser */
         public async Task<RegisterResult> CreateUserAsync(AddUserDto request)
         {
-            return await CreateUserAsync
-                (
-                    new RegisterDto
-                    {
-                        FirstName = request.FirstName,
-                        LastName = request.LastName,
-                        UserName = request.UserName,
-                        Email = request.Email,
-                        PhoneNo = request.PhoneNo,
-                        Password = request.Password //plain password
-                    },
-                    request.Role
-                );
+            var registerDto = _mapper.Map<RegisterDto>(request);
+
+            return await CreateUserAsync(registerDto, request.Role);
         }
 
         /* Login Logic */
